@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WSP AI Assistant</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.6.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --light-bg: #f8f9fa;
+            --dark-text: #2c3e50;
+            --light-text: #7f8c8d;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light-bg);
+            color: var(--dark-text);
+            line-height: 1.6;
+        }
+        
+        .chat-container {
+            max-width: 800px;
+            margin: 40px auto;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .chat-header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .chat-header h2 {
+            margin: 0;
+            font-weight: 600;
+        }
+        
+        .chat-header .subtitle {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+        
+        .chat-body {
+            background-color: white;
+            height: 500px;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .message {
+            max-width: 80%;
+            margin-bottom: 15px;
+            padding: 12px 15px;
+            border-radius: 18px;
+            position: relative;
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .user-message {
+            align-self: flex-end;
+            background-color: var(--secondary-color);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .bot-message {
+            align-self: flex-start;
+            background-color: #f1f1f1;
+            color: var(--dark-text);
+            border-bottom-left-radius: 4px;
+        }
+        
+        .message-time {
+            font-size: 0.7rem;
+            opacity: 0.7;
+            margin-top: 5px;
+            text-align: right;
+        }
+        
+        .chat-input {
+            background-color: white;
+            padding: 15px;
+            border-top: 1px solid #eee;
+            display: flex;
+        }
+        
+        .chat-input input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 30px;
+            outline: none;
+            transition: border 0.3s;
+        }
+        
+        .chat-input input:focus {
+            border-color: var(--secondary-color);
+        }
+        
+        .send-btn {
+            margin-left: 10px;
+            padding: 12px 25px;
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .send-btn:hover {
+            background-color: #2980b9;
+        }
+        
+        .typing-indicator {
+            display: flex;
+            align-self: flex-start;
+            padding: 12px 16px;
+            background-color: #f1f1f1;
+            border-radius: 18px;
+            border-bottom-left-radius: 4px;
+            margin-bottom: 15px;
+        }
+        
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            margin: 0 3px;
+            background-color: #666;
+            border-radius: 50%;
+            animation: typingAnimation 1.4s infinite ease-in-out;
+        }
+        
+        .typing-dot:nth-child(1) {
+            animation-delay: 0s;
+        }
+        
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes typingAnimation {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-5px); }
+        }
+        
+        .markdown-content h1, .markdown-content h2, .markdown-content h3 {
+            margin-top: 1em;
+            margin-bottom: 0.5em;
+            color: var(--primary-color);
+        }
+        
+        .markdown-content p {
+            margin-bottom: 1em;
+        }
+        
+        .markdown-content ul, .markdown-content ol {
+            padding-left: 20px;
+            margin-bottom: 1em;
+        }
+        
+        .markdown-content code {
+            background-color: #f5f5f5;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        
+        .markdown-content pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        
+        .markdown-content a {
+            color: var(--secondary-color);
+            text-decoration: none;
+        }
+        
+        .markdown-content a:hover {
+            text-decoration: underline;
+        }
+        
+        .sidebar {
+            width: 250px;
+            background-color: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+        
+        .conversation-item {
+            padding: 10px;
+            margin-bottom: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .conversation-item:hover {
+            background-color: #e9ecef;
+        }
+        
+        .conversation-item.active {
+            background-color: #dee2e6;
+            font-weight: bold;
+        }
+        
+        .new-chat-btn {
+            margin-bottom: 20px;
+            width: 100%;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                height: auto;
+                position: relative;
+                border-right: none;
+                border-bottom: 1px solid #dee2e6;
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .chat-container {
+                margin: 20px auto;
+                border-radius: 0;
+            }
+            
+            .message {
+                max-width: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <button class="btn btn-primary new-chat-btn" onclick="newConversation()">
+            <i class="fas fa-plus"></i> New Chat
+        </button>
+        <div id="conversation-list">
+            <!-- Conversation history will appear here -->
+        </div>
+    </div>
+    
+    <div class="main-content">
+        <div class="chat-container">
+            <div class="chat-header">
+                <h2>WSP AI Assistant</h2>
+                <div class="subtitle">Powered by DeepSeek AI</div>
+            </div>
+            
+            <div class="chat-body" id="chatbox">
+                <div class="bot-message message">
+                    <div class="markdown-content">
+                        Hello! I'm your WSP AI assistant. How can I help you today?
+                    </div>
+                    <div class="message-time">Just now</div>
+                </div>
+            </div>
+            
+            <div class="chat-input">
+                <input type="text" id="userInput" placeholder="Type your message here..." autocomplete="off">
+                <button class="send-btn" id="sendButton" onclick="sendMessage()">
+                    <i class="fas fa-paper-plane"></i> Send
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Set marked.js options
+        marked.setOptions({
+            breaks: true,
+            gfm: true
+        });
+        
+        // Global variables
+        let currentConversationId = null;
+        let conversations = JSON.parse(localStorage.getItem('conversations')) || [];
+        
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            renderConversationList();
+            
+            // Load the most recent conversation or create a new one
+            if (conversations.length > 0) {
+                loadConversation(conversations[0].id);
+            } else {
+                newConversation();
+            }
+            
+            // Set up event listeners
+            document.getElementById('userInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+        });
+        
+        // Create a new conversation
+        function newConversation() {
+            const newId = Date.now().toString();
+            const newConversation = {
+                id: newId,
+                title: "New Chat",
+                messages: [
+                    {
+                        role: "assistant",
+                        content: "Hello! I'm your WSP AI assistant. How can I help you today?",
+                        timestamp: new Date().toISOString()
+                    }
+                ],
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+            
+            conversations.unshift(newConversation);
+            saveConversations();
+            loadConversation(newId);
+            renderConversationList();
+        }
+        
+        // Load a conversation
+        function loadConversation(conversationId) {
+            currentConversationId = conversationId;
+            const conversation = conversations.find(c => c.id === conversationId);
+            
+            if (!conversation) return;
+            
+            // Update UI
+            document.getElementById('chatbox').innerHTML = '';
+            
+            // Render messages
+            conversation.messages.forEach(msg => {
+                addMessageToChat(msg.content, msg.role === 'user');
+            });
+            
+            // Update active state in conversation list
+            document.querySelectorAll('.conversation-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.id === conversationId) {
+                    item.classList.add('active');
+                }
+            });
+            
+            // Update document title
+            document.title = conversation.title + " - WSP AI Assistant";
+        }
+        
+        // Save conversations to localStorage
+        function saveConversations() {
+            localStorage.setItem('conversations', JSON.stringify(conversations));
+        }
+        
+        // Render conversation list in sidebar
+        function renderConversationList() {
+            const listContainer = document.getElementById('conversation-list');
+            listContainer.innerHTML = '';
+            
+            conversations.forEach(conversation => {
+                const conversationElement = document.createElement('div');
+                conversationElement.className = `conversation-item ${conversation.id === currentConversationId ? 'active' : ''}`;
+                conversationElement.dataset.id = conversation.id;
+                conversationElement.innerHTML = `
+                    <div><strong>${conversation.title}</strong></div>
+                    <small>${new Date(conversation.updatedAt).toLocaleString()}</small>
+                `;
+                
+                conversationElement.addEventListener('click', () => {
+                    loadConversation(conversation.id);
+                });
+                
+                listContainer.appendChild(conversationElement);
+            });
+        }
+        
+        // Add a message to the chat UI
+        function addMessageToChat(text, isUser) {
+            const chatbox = document.getElementById('chatbox');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = isUser ? 'user-message message' : 'bot-message message';
+            
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            messageDiv.innerHTML = `
+                <div class="markdown-content">${marked.parse(text)}</div>
+                <div class="message-time">${time}</div>
+            `;
+            
+            chatbox.appendChild(messageDiv);
+            chatbox.scrollTop = chatbox.scrollHeight;
+        }
+        
+        // Show typing indicator
+        function showTypingIndicator() {
+            const chatbox = document.getElementById('chatbox');
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'typing-indicator';
+            typingDiv.id = 'typingIndicator';
+            typingDiv.innerHTML = `
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            `;
+            chatbox.appendChild(typingDiv);
+            chatbox.scrollTop = chatbox.scrollHeight;
+        }
+        
+        // Hide typing indicator
+        function hideTypingIndicator() {
+            const typingIndicator = document.getElementById('typingIndicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+        }
+        
+        // Send message to AI
+        async function sendMessage() {
+            const input = document.getElementById('userInput').value.trim();
+            if (!input || !currentConversationId) return;
+            
+            // Get current conversation
+            const conversation = conversations.find(c => c.id === currentConversationId);
+            if (!conversation) return;
+            
+            // Disable input while processing
+            const userInput = document.getElementById('userInput');
+            const sendButton = document.getElementById('sendButton');
+            userInput.disabled = true;
+            sendButton.disabled = true;
+            
+            // Add user message to conversation
+            const userMessage = {
+                role: "user",
+                content: input,
+                timestamp: new Date().toISOString()
+            };
+            conversation.messages.push(userMessage);
+            
+            // Update conversation title if it's the first user message
+            if (conversation.messages.length === 2) { // First message is the initial bot message
+                conversation.title = input.length > 30 ? input.substring(0, 30) + "..." : input;
+            }
+            
+            // Update conversation timestamp
+            conversation.updatedAt = new Date().toISOString();
+            
+            // Save and render
+            saveConversations();
+            renderConversationList();
+            addMessageToChat(input, true);
+            userInput.value = '';
+            
+            // Show typing indicator
+            showTypingIndicator();
+            
+            try {
+                // Prepare the entire conversation history for context
+                const messagesForAI = conversation.messages.map(msg => ({
+                    role: msg.role,
+                    content: msg.content
+                }));
+                
+                const response = await fetch(
+                    'https://openrouter.ai/api/v1/chat/completions',
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': 'Bearer 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',
+                            'HTTP-Referer': window.location.href,
+                            'X-Title': 'WSP AI Assistant',
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            model: 'deepseek/deepseek-r1:free',
+                            messages: messagesForAI,
+                        }),
+                    }
+                );
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error?.message || 'Failed to get response');
+                }
+                
+                const responseText = data.choices?.[0]?.message?.content || 'No response received.';
+                
+                // Add AI response to conversation
+                const aiMessage = {
+                    role: "assistant",
+                    content: responseText,
+                    timestamp: new Date().toISOString()
+                };
+                conversation.messages.push(aiMessage);
+                conversation.updatedAt = new Date().toISOString();
+                
+                // Save and render
+                saveConversations();
+                renderConversationList();
+                
+                // Remove typing indicator and add bot response
+                hideTypingIndicator();
+                addMessageToChat(responseText, false);
+                
+            } catch (error) {
+                hideTypingIndicator();
+                
+                // Add error message to conversation
+                const errorMessage = {
+                    role: "assistant",
+                    content: `Error: ${error.message}`,
+                    timestamp: new Date().toISOString()
+                };
+                conversation.messages.push(errorMessage);
+                conversation.updatedAt = new Date().toISOString();
+                
+                saveConversations();
+                addMessageToChat(`Error: ${error.message}`, false);
+                console.error('API Error:', error);
+            } finally {
+                // Re-enable input
+                userInput.disabled = false;
+                sendButton.disabled = false;
+                userInput.focus();
+            }
+        }
+    </script>
+</body>
+</html>
